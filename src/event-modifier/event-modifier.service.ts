@@ -4,15 +4,15 @@ import {
   Inject,
   inject,
   Injectable,
-  InjectionToken,
   reflectComponentType,
-  ɵgetLContext,
+  ɵgetLContext
 } from '@angular/core';
 import {
   EventManagerPlugin,
   ɵKeyEventsPlugin,
 } from '@angular/platform-browser';
 import { first, Observable } from 'rxjs';
+import { EVENT_MODIFIER_OPTIONS, EventModifiers } from './event-modifier-options';
 
 enum SystemModifier {
   Ctrl = 'ctrl',
@@ -63,13 +63,6 @@ const modifierGuards: Record<RemoveModifier, GuardFn> = {
 
 const DISABLED = Symbol('DISABLED');
 
-type EventModifiers = {
-  map?: Record<string, (input: any, modifiers: string[]) => any>;
-  guard?: Record<
-    string,
-    (input: any, modifiers: string[]) => boolean | Promise<boolean>
-  >;
-};
 function withModifiers<T extends (event: any, ...args: any[]) => any>(
   fn: T,
   modifiers: string[],
@@ -127,11 +120,7 @@ function withModifiers<T extends (event: any, ...args: any[]) => any>(
     }
   };
 }
-export interface EventModifierOptions {
-  modifiers?: EventModifiers;
 
-  componentOutput?: boolean;
-}
 function getModifierStatusAndRemove(list: string[], item: string) {
   let index = list.indexOf(item);
   if (index === -1) {
@@ -142,12 +131,8 @@ function getModifierStatusAndRemove(list: string[], item: string) {
 }
 const HOOKED_EVENT = Symbol('HOOKED_EVENT');
 
-export const EVENT_MODIFIER_OPTIONS = new InjectionToken<EventModifierOptions>(
-  'EVENT_MODIFIER_OPTIONS'
-);
-
 @Injectable()
-export class EventModifiersPlugin extends EventManagerPlugin {
+export class EventModifierPlugin extends EventManagerPlugin {
   private readonly _options =
     inject(EVENT_MODIFIER_OPTIONS, { optional: true }) ?? {};
   constructor(@Inject(DOCUMENT) doc: Document) {
