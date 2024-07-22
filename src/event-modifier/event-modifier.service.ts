@@ -5,14 +5,17 @@ import {
   inject,
   Injectable,
   reflectComponentType,
-  ɵgetLContext
+  ɵgetLContext,
 } from '@angular/core';
 import {
   EventManagerPlugin,
   ɵKeyEventsPlugin,
 } from '@angular/platform-browser';
 import { first, Observable } from 'rxjs';
-import { EVENT_MODIFIER_OPTIONS, EventModifiers } from './event-modifier-options';
+import {
+  EVENT_MODIFIER_OPTIONS,
+  EventModifiers,
+} from './event-modifier-options';
 
 enum SystemModifier {
   Ctrl = 'ctrl',
@@ -60,6 +63,16 @@ const modifierGuards: Record<RemoveModifier, GuardFn> = {
   [MouseButtonModifier.Middle]: (e) => 'button' in e && e.button !== 1,
   [MouseButtonModifier.Right]: (e) => 'button' in e && e.button !== 2,
 };
+
+const removeModifiers = [
+  EventModifier.Stop,
+  EventModifier.Prevent,
+  EventModifier.Self,
+  MouseButtonModifier.Left,
+  MouseButtonModifier.Middle,
+  MouseButtonModifier.Right,
+  SystemModifier.Exact,
+];
 
 const DISABLED = Symbol('DISABLED');
 
@@ -147,13 +160,18 @@ export class EventModifierPlugin extends EventManagerPlugin {
     eventName: string,
     handler: Function
   ): Function {
-    const modifiers = eventName.split('.');
+    let modifiers = eventName.split('.');
     const name = modifiers.shift() as string;
     let newHandler = withModifiers(
       handler as any,
       modifiers.slice(),
       this._options.modifiers ?? {}
     );
+
+    modifiers = modifiers.filter(
+      (item) => !removeModifiers.includes(item as RemoveModifier)
+    );
+
     if (
       this._options.componentOutput &&
       typeof (element as any)['__ngContext__'] !== undefined
@@ -245,6 +263,18 @@ export class EventModifierPlugin extends EventManagerPlugin {
         );
       };
     });
+  }
+
+  private _setupEventListener(
+    element: HTMLElement,
+    eventName: string,
+    handler: Function,
+    options: AddEventListenerOptions
+  ): () => void {
+    element.addEventListener(eventName as any, handler as any, options);
+
+    return () =>
+      this._removeEventListener(element, eventName as any, handler as any);
   }
 
   private _removeEventListener(
